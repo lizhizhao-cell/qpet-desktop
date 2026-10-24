@@ -1,0 +1,27 @@
+{
+  "id": "happy",
+  "label": "高兴",
+  "duration": 1.8,
+  "description": "挥手、0.7秒跳跃、月牙闭眼笑，结束恢复",
+  "tracks": [
+    {
+      "type": "motion", "name": "挥手", "file": "both_wave.motion3.json",
+      "start": 0, "duration": 1.8,
+      "parameters": ["ParamShoulderL", "ParamElbowL", "ParamWristL", "ParamShoulderR", "ParamElbowR", "ParamWristR"]
+    },
+    {
+      "type": "jump", "name": "跳跃", "start": 0.47, "duration": 0.7,
+      "parameters": ["ParamStepLX", "ParamStepRX", "ParamLiftL", "ParamLiftR"]
+    },
+    {
+      "type": "keyframes", "name": "闭眼开心笑", "start": 0, "duration": 1.8,
+      "parameters": ["ParamEyeLOpen", "ParamEyeROpen", "ParamEyeSmile", "ParamMouthForm"],
+      "curves": {
+        "ParamEyeLOpen": [[0, 1], [0.45, 1], [0.62, 0], [1.15, 0], [1.4, 1], [1.8, 1]],
+        "ParamEyeROpen": [[0, 1], [0.45, 1], [0.62, 0], [1.15, 0], [1.4, 1], [1.8, 1]],
+        "ParamEyeSmile": [[0, 0], [0.45, 0], [0.62, 1], [1.15, 1], [1.4, 0], [1.8, 0]],
+        "ParamMouthForm": [[0, 0], [0.35, 0.8], [0.7, 1], [1.35, 1], [1.8, 0]]
+      }
+    }
+  ]
+}

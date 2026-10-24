@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "version": 1,
+  "sourceRuntime": "surprise-face-v04",
+  "unchangedDurations": {
+    "happy": 1.8,
+    "jump": 0.7,
+    "walkCycle": 1.6,
+    "curious": 2.4,
+    "sleepy": 3.1
+  },
+  "sha256": {
+    "expressions\\curious.json": "3A460ECD92DA3612D1000A299969DF7A2FF45F8D50AD730329EE94EEBBAE4F6C",
+    "expressions\\happy.json": "98AF333FDEE8CDFA66F292C46B3113CF06E6CA97F370AB989CCB8AE5C9D33F70",
+    "expressions\\sleepy.json": "50AFEA1339BAE74C67F2F96269F2709C9E82F9D442638CE6DE273A2130CC62BD"
+  },
+  "validatedBy": "qa/expressions-20261021/enhanced-final/report.json"
+}

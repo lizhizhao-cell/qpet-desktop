@@ -1,0 +1,31 @@
+{
+  "id": "curious", "label": "好奇", "duration": 2.4,
+  "description": "歪头观察、略睁大眼睛和小圆嘴，眨眼恢复",
+  "phases": [[0, "歪头观察"], [0.4, "停顿"], [0.95, "另一侧轻摆头"], [1.85, "眨眼回正"]],
+  "tracks": [
+    {
+      "type": "keyframes", "name": "歪头观察", "start": 0, "duration": 2.4,
+      "parameters": ["ParamHeadTilt", "ParamHairSway"],
+      "curves": {
+        "ParamHeadTilt": [[0, 0], [0.4, -0.95], [0.95, -0.95], [1.5, 0.65], [1.8, 0.65], [2.4, 0]],
+        "ParamHairSway": [[0, 0], [0.55, 0.18], [1, 0.18], [1.65, -0.12], [2.4, 0]]
+      }
+    },
+    {
+      "type": "keyframes", "name": "观察后眨眼", "start": 0, "duration": 2.4,
+      "parameters": ["ParamEyeLOpen", "ParamEyeROpen"],
+      "curves": {
+        "ParamEyeLOpen": [[0, 1], [1.85, 1], [1.98, 0], [2.06, 0], [2.22, 1], [2.4, 1]],
+        "ParamEyeROpen": [[0, 1], [1.85, 1], [1.98, 0], [2.06, 0], [2.22, 1], [2.4, 1]]
+      }
+    },
+    {
+      "type": "keyframes", "name": "好奇眼口", "start": 0, "duration": 2.4,
+      "parameters": ["ParamEyeShape", "ParamMouthForm"],
+      "curves": {
+        "ParamEyeShape": [[0, 0], [0.35, 0.7], [0.95, 0.7], [1.5, 0.85], [1.85, 0.85], [2.4, 0]],
+        "ParamMouthForm": [[0, 0], [0.4, -0.7], [1.8, -0.7], [2.4, 0]]
+      }
+    }
+  ]
+}

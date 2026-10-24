@@ -1,0 +1,8 @@
+{
+  "name": "qpet-desktop",
+  "version": "0.1.0-beta.1",
+  "description": "QPet interactive Live2D desktop companion for Windows",
+  "author": "QPet contributors",
+  "main": "main.cjs",
+  "private": true
+}

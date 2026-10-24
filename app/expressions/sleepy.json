@@ -1,0 +1,31 @@
+{
+  "id": "sleepy", "label": "犯困", "duration": 3.1,
+  "description": "慢慢闭眼、轻低头和微歪头，嘴轻合后恢复",
+  "phases": [[0, "慢慢闭眼"], [0.95, "低头犯困"], [1.7, "轻歪头"], [2.3, "睁眼回正"]],
+  "tracks": [
+    {
+      "type": "keyframes", "name": "慢眨眼", "start": 0, "duration": 3.1,
+      "parameters": ["ParamEyeLOpen", "ParamEyeROpen"],
+      "curves": {
+        "ParamEyeLOpen": [[0, 1], [0.35, 0.55], [0.75, 0.12], [1.05, 0], [1.65, 0], [2.1, 0.25], [2.55, 0.65], [3.1, 1]],
+        "ParamEyeROpen": [[0, 1], [0.35, 0.55], [0.75, 0.12], [1.05, 0], [1.65, 0], [2.1, 0.25], [2.55, 0.65], [3.1, 1]]
+      }
+    },
+    {
+      "type": "keyframes", "name": "低头微歪", "start": 0, "duration": 3.1,
+      "parameters": ["ParamHeadNod", "ParamHeadTilt"],
+      "curves": {
+        "ParamHeadNod": [[0, 0], [0.45, 0.25], [1, 0.65], [1.65, 0.75], [2.2, 0.4], [3.1, 0]],
+        "ParamHeadTilt": [[0, 0], [0.75, 0.1], [1.65, 0.65], [2.1, 0.65], [3.1, 0]]
+      }
+    },
+    {
+      "type": "keyframes", "name": "犯困小嘴", "start": 0, "duration": 3.1,
+      "parameters": ["ParamMouthOpenY", "ParamMouthForm"],
+      "curves": {
+        "ParamMouthOpenY": [[0, 1], [0.65, 0.3], [1.8, 0.3], [3.1, 1]],
+        "ParamMouthForm": [[0, 0], [0.8, -0.35], [1.8, -0.35], [3.1, 0]]
+      }
+    }
+  ]
+}
