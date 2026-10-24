@@ -6,13 +6,15 @@ Windows x64 Live2D桌面宠物，基于Electron与本地Cubism Core运行。角�
 
 ## 下载与使用
 
-源码仓库为 **lizhizhao-cell/qpet-desktop**。下载安装包的公开入口将位于本仓库的 **Releases**：
+普通用户请到 [v0.1.0-beta.1 下载页](https://github.com/lizhizhao-cell/qpet-desktop/releases/tag/v0.1.0-beta.1) 选择下面的文件，**无需下载源码或安装开发工具**：
 
-- `QPet-Setup-版本-win-x64.exe`：安装版。
-- `QPet-版本-win-x64.zip`：解压到可写目录后，双击`QPet.exe`。
-- `SHA256SUMS.txt`：下载文件的SHA256。
+- [Windows x64 安装版](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/QPet-Setup-0.1.0-beta.1-win-x64.exe)：下载后双击安装。
+- [Windows x64 免安装 ZIP](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/QPet-0.1.0-beta.1-win-x64.zip)：完整解压到可写目录，再双击其中的`QPet.exe`，保留其他文件。
+- [SHA256SUMS.txt](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/SHA256SUMS.txt)：下载文件的SHA256。
 
-当前安装版和ZIP为作者审阅的草稿预发布，尚未公开提供下载。跨机器验证、代码签名及素材/Core公开分发条件仍待确认；官方模型工程核验也尚未完成。已通过回归的原运行模型继续用于测试候选。源码公开不代表二进制发行包已经上架。
+这是测试预发布版，包含运行需要的原模型与运行时，已完成本机安装、运行、互动、动作和卸载检查。应用未签名，其他电脑兼容性仍待验证；官方模型工程核验尚未完成，使用现有正常运行模型。源码许可和第三方/素材说明见文末及`THIRD_PARTY_NOTICES.md`，不宣称获得额外素材授权。
+
+Windows可能因应用未签名显示提示，请先核对来源和SHA256，自行决定是否运行。退出请使用角色右键或托盘菜单。
 
 ## 功能
 
