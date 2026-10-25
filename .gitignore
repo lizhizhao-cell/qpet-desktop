@@ -1,5 +1,6 @@
 node_modules/
 release/
+release-v*/
 production-live2d/
 app/vendor/*.js
 app/vendor/*.wasm

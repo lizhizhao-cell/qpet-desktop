@@ -18,6 +18,10 @@ Windows可能因应用未签名显示提示，请先核对来源和SHA256，自�
 
 ## 功能
 
+当前源码版本为 **0.2.0-beta.5**，新增功能与验证见[更新说明](RELEASE_NOTES.md)。上方公开下载仍为0.1.0-beta.1，不包含下列气泡和自主增强功能。
+
+- 头顶窄输入气泡，带少量装饰、随文字长度伸缩；单击宠物打开、回车发送、Esc收起。支持动作口令和JSON扩展，见[互动指令说明](INTERACTION_COMMANDS.md)。
+- 自然/活泼/安静三档自主活动、短散步和更多本地互动；输入、专注、免打扰和手动操作优先。
 - 透明置顶、鼠标拖动、透明区穿透、大小和位置保存。
 - 左右行走、跳跃、高兴、打招呼等组合动作，捂嘴与月牙眼。
 - 右键“互动一下…”：给我打气、夸夸她、一起放松，以及后续选择。
@@ -41,7 +45,7 @@ npm run dist:win
 
 资源导入路径应是你有权使用的QPet原工程或便携目录，包含匹配的`production-live2d/runtime/surprise-face-v04/`和`desktop-pet/vendor/live2dcubismcore.min.js`。导入器核验`asset-lock.json`中的SHA，不接受不同模型，不自动从不明来源下载资源。导入文件均被Git忽略。
 
-构建输出在`release/`，已有输出拒绝覆盖。固定Electron为43.8.3，electron-builder为26.15.3。若已有相同版本本地Electron，可设置`QPET_ELECTRON_DIST`指向该目录以复用；否则构建工具按固定版本准备运行时。
+当前构建输出在`release-v0.2.0-beta.5-autonomy-final/`，已有输出拒绝覆盖，旧`release/`及beta.1至beta.4候选保留。固定Electron为43.8.3，electron-builder为26.15.3。若已有相同版本本地Electron，可设置`QPET_ELECTRON_DIST`指向该目录以复用；否则构建工具按固定版本准备运行时。
 
 源码CI只跑不依赖角色素材的检查与测试。当前没有自动公开发布工作流。
 

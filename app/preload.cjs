@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("petHost", {
   interactive: value => ipcRenderer.send("pet:interactive", !!value),
   drag: (phase, point) => ipcRenderer.send("pet:drag", {phase, point}),
   menu: () => ipcRenderer.send("pet:menu"),
+  openCommands: () => ipcRenderer.send("pet:command-open"),
   onAction: callback => {
     const handler = (_event, action) => callback(action);
     ipcRenderer.on("pet:action", handler);

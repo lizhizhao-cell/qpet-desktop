@@ -16,11 +16,11 @@ if(!files.length){
 }
 const findings=[];
 for(const file of files){
-  if(/(^|\/)(\.history|node_modules|release|production-live2d|\.local|\.qa-[^/]*)(\/|$)|\.(cmo3|can3|moc3|psd|exe|dll)$/i.test(file))
+  if(/(^|\/)(\.history|node_modules|release(?:-v[^/]*)?|production-live2d|\.local|\.qa-[^/]*)(\/|$)|\.(cmo3|can3|moc3|psd|exe|dll)$/i.test(file))
     findings.push(file+": unexpected private/binary/development asset");
   if(/^app\/vendor\/.*\.(js|wasm)$/.test(file))findings.push(file+": licensed Core must not be tracked");
   if(/(^|\/)(settings|companion|\.instance)\.json$/.test(file))findings.push(file+": user data must not be tracked");
-  if(/\.(cjs|json|md|yml|ps1|svg|gitignore|gitattributes)$/.test(file)){
+  if(/\.(cjs|js|css|html|json|md|yml|ps1|svg|gitignore|gitattributes)$/.test(file)){
     const text=fs.readFileSync(path.join(root,file),"utf8");
     if(/[A-Z]:\\Users\\[^\\\r\n]+\\/i.test(text))findings.push(file+": personal absolute Windows path");
     if(/\b(?:ghp|github_pat)_[A-Za-z0-9_]{20,}\b/.test(text))findings.push(file+": possible credential");

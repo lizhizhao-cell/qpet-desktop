@@ -1,13 +1,13 @@
 param(
     [Parameter(Mandatory=$true)][string]$Executable,
-    [ValidateSet('companion','expressions')][string]$Suite='companion',
+    [ValidateSet('companion','expressions','commands')][string]$Suite='companion',
     [Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$QaRun
 )
 $ErrorActionPreference='Stop'
 $taskExecutable=[IO.Path]::GetFullPath($Executable)
 if(-not(Test-Path -LiteralPath $taskExecutable -PathType Leaf)){throw 'Packaged executable is missing'}
-$taskCategory=if($Suite -eq 'companion'){'companion-20261021'}else{'expressions-20261021'}
-$taskFlag=if($Suite -eq 'companion'){'--companion-test'}else{'--expression-integration-test'}
+$taskCategory=if($Suite -eq 'commands'){'commands-20261024'}elseif($Suite -eq 'companion'){'companion-20261021'}else{'expressions-20261021'}
+$taskFlag=if($Suite -eq 'commands'){'--command-test'}elseif($Suite -eq 'companion'){'--companion-test'}else{'--expression-integration-test'}
 $taskQaBase=Join-Path ([IO.Path]::GetTempPath()) 'QPet2D-Desktop-QA'
 $taskReportDirectory=Join-Path $taskQaBase ('qa\'+$taskCategory+'\'+$QaRun)
 $taskProfile=Join-Path $taskQaBase ('.qa-'+$taskCategory+'\'+$QaRun)

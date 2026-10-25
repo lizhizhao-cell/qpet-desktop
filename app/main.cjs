@@ -3,6 +3,8 @@ const {app, BrowserWindow, Menu, Tray, nativeImage, ipcMain, screen, dialog} = r
 const fs = require("node:fs"), path = require("node:path"), http = require("node:http");
 const crypto = require("node:crypto");
 const {Companion} = require("./companion-core.cjs");
+const {parseCommand, loadCustom} = require("./command-parser.cjs");
+const {commandPlacement} = require("./command-placement.cjs");
 const ROOT = __dirname, PROJECT = path.resolve(ROOT, "..");
 const RUNTIME = path.join(PROJECT, "production-live2d/runtime");
 const adoptedModel = JSON.parse(fs.readFileSync(path.join(ROOT, "model-version.json"), "utf8"));
@@ -12,21 +14,23 @@ const MODEL_VERSION = adoptedModel.runtimeVersion;
 const DESKTOP_PAGE = "/runtime/" + MODEL_VERSION + "/outward/desktop.html";
 const EXPRESSION_TEST = process.argv.includes("--expression-integration-test");
 const COMPANION_TEST = process.argv.includes("--companion-test");
+const COMMAND_TEST = process.argv.includes("--command-test");
 const DAILY_TEST = process.argv.includes("--daily-actions-test");
-const SELF_TEST = process.argv.includes("--self-test") || DAILY_TEST || EXPRESSION_TEST || COMPANION_TEST;
+const SELF_TEST = process.argv.includes("--self-test") || DAILY_TEST || EXPRESSION_TEST || COMPANION_TEST || COMMAND_TEST;
 const testRun = process.argv.find(value => value.startsWith("--qa-run="))?.slice(9) || "integration";
 if (!/^[a-z0-9-]+$/.test(testRun)) throw Error("Invalid QA run name");
 const SIZES = {small: [260, 330], normal: [320, 400], large: [400, 500]};
 app.setName("QPet Desktop");
 const QA_ROOT = app.isPackaged ? path.join(app.getPath("temp"), "QPet2D-Desktop-QA") : ROOT;
 app.setPath("userData", SELF_TEST
-  ? path.join(QA_ROOT, COMPANION_TEST ? ".qa-companion-20261021/" + testRun
+  ? path.join(QA_ROOT, COMMAND_TEST ? ".qa-commands-20261024/" + testRun
+    : COMPANION_TEST ? ".qa-companion-20261021/" + testRun
     : EXPRESSION_TEST ? ".qa-expressions-20261021/" + testRun : ".qa-user-data")
   : path.join(app.getPath("appData"), "QPet2D-Desktop"));
 const STATE_FILE = path.join(app.getPath("userData"), "settings.json");
-const INSTANCE_FILE = app.isPackaged || EXPRESSION_TEST || COMPANION_TEST
+const INSTANCE_FILE = app.isPackaged || EXPRESSION_TEST || COMPANION_TEST || COMMAND_TEST
   ? path.join(app.getPath("userData"), ".instance.json") : path.join(ROOT, ".instance.json");
-const defaults = {size: "normal", alwaysOnTop: true, clickThrough: false, autonomous: true};
+const defaults = {size: "normal", alwaysOnTop: true, clickThrough: false, autonomous: true, activityMode: "natural"};
 const companion = new Companion({file: path.join(app.getPath("userData"), "companion.json")});
 let settings = {...defaults};
 try {
@@ -35,6 +39,7 @@ try {
     if (typeof saved[key] === typeof defaults[key]) settings[key] = saved[key];
   }
   if (!SIZES[settings.size]) settings.size = "normal";
+  if (!["natural","lively","quiet"].includes(settings.activityMode)) settings.activityMode = "natural";
   if (Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
     settings.x = saved.x; settings.y = saved.y;
   }
@@ -43,6 +48,11 @@ let win, tray, server, origin, saveTimer, cursorTimer, anchor = {x: 0, y: 0};
 let pose = {x: 0, y: 0}, drag = null, interactive = false, menuOpen = false;
 let rendererReady = false, quitting = false;
 let companionTimer, exitTimer, exitStarted = false, exitAuthorized = false;
+let commandWindow = null, lastCommandAt = 0;
+let commandAnchor = null;
+let commandWidth = 160;
+const COMMANDS_PAGE = "/desktop/commands.html";
+const COMMAND_RULES_FILE = path.join(app.getPath("userData"), "interaction-commands.json");
 
 function errorLog(error) {
   fs.mkdirSync(app.getPath("userData"), {recursive: true});
@@ -72,6 +82,7 @@ function clampBounds(b) {
 }
 function state() {
   return {settings, bounds: win.getBounds(), workArea: workArea(), dragging: !!drag,
+    commandOpen:!!commandWindow&&!commandWindow.isDestroyed()&&commandWindow.isVisible(),menuOpen,
     interactive, ignoringMouse: settings.clickThrough || (!interactive && !drag && !menuOpen),
     rendererReady, selfTest: SELF_TEST, version: process.versions.electron,
     modelVersion: MODEL_VERSION, desktopEffectsVersion: 1, visible: win.isVisible(),
@@ -116,6 +127,7 @@ async function companionCommand(command, payload = {}) {
   if (command === "touch") event = companion.touch(payload.area);
   else if (command === "interaction:menu") event = companion.interactionMenu();
   else if (command === "interact" && typeof payload.topic === "string") event = companion.interact(payload.topic);
+  else if (command === "respond" && typeof payload.topic === "string") event = companion.respond(payload.topic);
   else if (command === "focus:start" && [25, 50].includes(payload.minutes))
     event = companion.startFocus(payload.minutes);
   else if (command === "focus:pause") companion.pauseFocus();
@@ -130,6 +142,95 @@ async function companionCommand(command, payload = {}) {
   sendCompanion(event);
   pumpCompanion();
   return companion.view();
+}
+function setActivityMode(mode) {
+  if(!["natural","lively","quiet"].includes(mode))return false;
+  settings.activityMode=mode;settings.autonomous=mode!=="quiet";
+  scheduleSave();sendState();return true;
+}
+async function executePetCommand(text) {
+  const custom = loadCustom(COMMAND_RULES_FILE), parsed = parseCommand(text, custom.rules);
+  const reply = (message, accepted = false) => ({reply: message, accepted, warning: custom.warning});
+  if (["invalid", "empty", "unknown", "help"].includes(parsed.type)) return reply(parsed.reply);
+  if (quitting || exitStarted || !rendererReady) return reply("桌宠暂时没有准备好，请稍后再试。");
+  const immediate = parsed.type === "action" && ["stop", "reset"].includes(parsed.value);
+  if (!immediate && Date.now() - lastCommandAt < 250) return reply("稍等一下，再发送下一句指令吧。");
+  lastCommandAt = Date.now();
+  if(parsed.type==="activity"){
+    setActivityMode(parsed.value);
+    return reply(parsed.value==="quiet"?"好，我先安静待着。你叫我，我就回应。"
+      :parsed.value==="lively"?"好呀，我会更活泼些，空闲时自己活动一下。":"收到，按自然的节奏陪着你。",true);
+  }
+  if (parsed.type === "action") {
+    if (!win.isVisible()) win.showInactive();
+    action(parsed.value);
+    return reply(parsed.reply, true);
+  }
+  if (parsed.type === "interaction" || parsed.type === "response") {
+    if (!companion.view().enabled) return reply("陪伴互动已关闭，请在“日常陪伴”里打开后再试。");
+    const event = parsed.type === "response" ? companion.respond(parsed.value) : companion.interact(parsed.value);
+    if (!event) return reply("让我缓一小会儿，互动之间请间隔4秒。");
+    sendState();
+    if (event.action) { if (!win.isVisible()) win.showInactive(); action(event.action); }
+    return reply(event.line, true);
+  }
+  const care = companion.view();
+  if (!care.enabled) return reply("陪伴互动已关闭，请先打开陪伴互动。");
+  if (parsed.value === "start25" || parsed.value === "start50") {
+    if (care.focus) return reply("已经有一轮专注，可以输入“暂停专注”或“结束专注”。");
+    const minutes = parsed.value === "start25" ? 25 : 50;
+    await companionCommand("focus:start", {minutes});
+    return reply(`已开始${minutes}分钟专注，我会安静陪着。`, true);
+  }
+  if (!care.focus) return reply("现在没有进行中的专注，可以输入“专注25分钟”开始。");
+  if (parsed.value === "pause") {
+    if (care.focus.status === "paused") return reply("这轮专注已经暂停了。");
+    await companionCommand("focus:pause"); return reply("已暂停专注。准备好后输入“继续专注”。", true);
+  }
+  if (parsed.value === "resume") {
+    if (care.focus.status === "running") return reply("这轮专注正在进行中。");
+    await companionCommand("focus:resume"); return reply("已继续这轮专注。", true);
+  }
+  await companionCommand("focus:cancel"); return reply("已结束这轮专注。", true);
+}
+function positionCommandWindow(requestedWidth = commandWidth) {
+  if (!commandWindow || commandWindow.isDestroyed() || !win || win.isDestroyed()) return;
+  if (Number.isFinite(requestedWidth)) commandWidth = Math.round(Math.max(160, Math.min(440, requestedWidth)));
+  commandAnchor = commandPlacement(win.getBounds(), workArea(), commandWidth);
+  const current = commandWindow.getBounds(), next = commandAnchor.bounds;
+  if (Object.keys(next).some(key => current[key] !== next[key])) commandWindow.setBounds(next, false);
+  commandWindow.webContents.send("pet:command-anchor", commandAnchor);
+}
+async function openCommandWindow() {
+  if (!rendererReady || quitting || exitStarted) return;
+  if (!win.isVisible()) win.showInactive();
+  if (commandWindow && !commandWindow.isDestroyed()) {
+    if (commandWindow.isMinimized()) commandWindow.restore();
+    positionCommandWindow(); commandWindow.show(); commandWindow.focus(); return;
+  }
+  fs.mkdirSync(path.dirname(COMMAND_RULES_FILE), {recursive: true});
+  if (!fs.existsSync(COMMAND_RULES_FILE))
+    fs.writeFileSync(COMMAND_RULES_FILE, JSON.stringify({schema: 1, commands: []}, null, 2), {flag: "wx"});
+  commandWidth = 160;
+  commandAnchor = commandPlacement(win.getBounds(), workArea(), commandWidth);
+  commandWindow = new BrowserWindow({...commandAnchor.bounds,
+    title: "和 QPet 互动", parent: win, show: false, autoHideMenuBar: true,
+    frame: false, transparent: true, hasShadow: false, resizable: false,
+    maximizable: false, fullscreenable: false, skipTaskbar: true,
+    alwaysOnTop: settings.alwaysOnTop, backgroundColor: "#00000000",
+    webPreferences: {preload: path.join(ROOT, "commands-preload.cjs"), nodeIntegration: false,
+      contextIsolation: true, sandbox: true}});
+  const current = commandWindow;
+  current.setMenu(null);
+  current.webContents.setWindowOpenHandler(() => ({action: "deny"}));
+  current.webContents.on("will-navigate", (event, url) => {
+    if (url !== origin + COMMANDS_PAGE) event.preventDefault();
+  });
+  current.on("show",sendState);
+  current.on("hide",sendState);
+  current.on("closed", () => { if (commandWindow === current) commandWindow = null; sendState(); });
+  await current.loadURL(origin + COMMANDS_PAGE);
+  if (!current.isDestroyed()) { positionCommandWindow(); current.show(); current.focus(); }
 }
 async function companionRecords(clear = false) {
   if (clear) {
@@ -146,7 +247,7 @@ async function companionRecords(clear = false) {
     message: `一起出现了 ${value.totalDays} 天，最近7天来了 ${value.recentActiveDays} 天。`,
     detail: `头部互动 ${value.headTouches} 次，身体互动 ${value.bodyTouches} 次。\n`
       + `完成专注 ${value.completedFocus} 轮，共 ${value.focusMinutes} 分钟。\n\n`
-      + `主动互动 ${Object.values(value.interactions).reduce((sum, count) => sum + count, 0)} 次。\n\n`
+      + `主动互动 ${[...Object.values(value.interactions),...Object.values(value.responses)].reduce((sum, count) => sum + count, 0)} 次。\n\n`
       + "只记录桌宠自身的使用汇总，保存在本机。可以随时清除。\n"
       + "免打扰会暂停主动问候和提醒；你的点击仍会得到回应。", buttons: ["知道了"]});
 }
@@ -207,8 +308,11 @@ function menuTemplate() {
       command("眨眼", "blink"), command("点头", "nod"), command("左右摆头", "head"),
     ]},
     command("回到自然站姿", "reset"),
+    {label: "输入指令…", enabled: rendererReady,
+      click: () => openCommandWindow().catch(errorLog)},
     {label: "互动一下…", enabled: care.enabled && rendererReady,
       click: invoke("interaction:menu", {})},
+    {label:"陪我玩一会",enabled:care.enabled&&rendererReady,click:invoke("respond",{topic:"bored"})},
     {label: "日常陪伴", submenu: [
       {label: "陪伴互动", type: "checkbox", checked: care.enabled,
         click: item => companionCommand("enabled", {value: item.checked}).catch(errorLog)},
@@ -231,10 +335,15 @@ function menuTemplate() {
     ]},
     {type: "separator"},
     {label: "自主活动", type: "checkbox", checked: settings.autonomous,
-      click: item => { settings.autonomous = item.checked; scheduleSave(); sendState(); }},
+      click: item => setActivityMode(item.checked?(settings.activityMode==="quiet"?"natural":settings.activityMode):"quiet")},
+    {label:"活跃程度",submenu:[["quiet","安静陪伴"],["natural","自然活动"],["lively","活泼一点"]]
+      .map(([mode,label])=>({label,type:"radio",checked:mode===(settings.autonomous?settings.activityMode:"quiet"),
+        click:()=>setActivityMode(mode)}))},
     {label: "始终置顶", type: "checkbox", checked: settings.alwaysOnTop,
       click: item => { settings.alwaysOnTop = item.checked;
-        win.setAlwaysOnTop(item.checked); scheduleSave(); sendState(); }},
+        win.setAlwaysOnTop(item.checked);
+        if (commandWindow && !commandWindow.isDestroyed()) commandWindow.setAlwaysOnTop(item.checked);
+        scheduleSave(); sendState(); }},
     {label: "鼠标穿透（从托盘取消）", type: "checkbox", checked: settings.clickThrough,
       click: item => { settings.clickThrough = item.checked;
         updateMouse(); scheduleSave(); sendState(); }},
@@ -252,9 +361,9 @@ function menuTemplate() {
   ];
 }
 function showMenu() {
-  menuOpen = true; updateMouse();
+  menuOpen = true; updateMouse();sendState();
   Menu.buildFromTemplate(menuTemplate()).popup({window: win, callback: () => {
-    menuOpen = false; updateMouse();
+    menuOpen = false; updateMouse();sendState();
   }});
 }
 function applyPose(next) {
@@ -299,7 +408,7 @@ function desktopHtml() {
     .replace('<script src="/vendor/live2dcubismcore.min.js">',
       '<script src="/desktop/frame-clock.js"></script><script src="/vendor/live2dcubismcore.min.js">')
     .replace("</style>", "</style><link rel=\"stylesheet\" href=\"/desktop/pet.css\">")
-    .replace("</html>", "<script src=\"/desktop/pet.js\"></script><script src=\"/desktop/companion.js\"></script></html>");
+    .replace("</html>", "<script src=\"/desktop/autonomy.js\"></script><script src=\"/desktop/pet.js\"></script><script src=\"/desktop/companion.js\"></script></html>");
 }
 function desktopEmotions() {
   const source = fs.readFileSync(path.join(RUNTIME, MODEL_VERSION, "emotion_actions.js"), "utf8");
@@ -336,7 +445,8 @@ function createServer() {
         else if (pathname === "/vendor/live2dcubismcore.min.js") {
           root = path.join(ROOT, "vendor"); relative = "live2dcubismcore.min.js";
         } else if (["/desktop/pet.css", "/desktop/pet.js", "/desktop/frame-clock.js",
-          "/desktop/companion.js"].includes(pathname)) {
+          "/desktop/companion.js", "/desktop/autonomy.js", "/desktop/commands.html", "/desktop/commands.css",
+          "/desktop/commands.js"].includes(pathname)) {
           root = ROOT; relative = pathname.slice(9);
         } else { response.writeHead(404); response.end(); return; }
         const file = path.resolve(root, relative);
@@ -377,10 +487,15 @@ async function createPet() {
     if (details.level === "error" || details.level === "warning")
       errorLog(Error("Renderer: " + details.message));
   });
-  win.on("move", () => { scheduleSave(); sendState(); });
-  win.on("resize", sendState);
-  win.on("show", () => { sendState(); pumpCompanion(); });
-  win.on("hide", () => { sendState(); pumpCompanion(); });
+  win.on("move", () => { scheduleSave(); sendState(); positionCommandWindow(); });
+  win.on("resize", () => { sendState(); positionCommandWindow(); });
+  win.on("show", () => {
+    if (commandWindow && !commandWindow.isDestroyed()) {
+      positionCommandWindow(); commandWindow.showInactive();
+    }
+    sendState(); pumpCompanion();
+  });
+  win.on("hide", () => { if (commandWindow && !commandWindow.isDestroyed()) commandWindow.hide(); sendState(); pumpCompanion(); });
   win.on("blur", () => { if (drag) dragEvent({phase: "end"}); });
   win.on("close", event => {
     if (!SELF_TEST && !exitAuthorized) { event.preventDefault(); requestExit(); }
@@ -391,6 +506,22 @@ async function createPet() {
   ipcMain.handle("pet:state", event => valid(event) ? state() : null);
   ipcMain.handle("pet:companion", (event, command, payload) =>
     valid(event) ? companionCommand(command, payload) : null);
+  const validCommand = event => commandWindow && !commandWindow.isDestroyed()
+    && event.sender === commandWindow.webContents
+    && event.senderFrame === commandWindow.webContents.mainFrame;
+  ipcMain.handle("pet:command", (event, text) =>
+    validCommand(event) ? executePetCommand(text) : null);
+  ipcMain.handle("pet:command-info", event =>
+    validCommand(event) ? {rulesPath: COMMAND_RULES_FILE, warning: loadCustom(COMMAND_RULES_FILE).warning, anchor: commandAnchor} : null);
+  ipcMain.on("pet:command-close", event => { if (validCommand(event)) commandWindow.close(); });
+  ipcMain.on("pet:command-resize", (event, width) => {
+    if (validCommand(event) && Number.isInteger(width) && width >= 160 && width <= 440)
+      positionCommandWindow(width);
+  });
+  ipcMain.on("pet:command-open", event => {
+    if (valid(event) && event.senderFrame === win.webContents.mainFrame)
+      openCommandWindow().catch(errorLog);
+  });
   ipcMain.on("pet:pose", (event, value) => { if (valid(event)) applyPose(value); });
   ipcMain.on("pet:rebase", event => { if (valid(event)) resetAnchor(); });
   ipcMain.on("pet:interactive", (event, value) => {
@@ -445,19 +576,23 @@ async function createPet() {
 }
 async function runSelfTest() {
   try {
-    const report = await require(COMPANION_TEST ? "./companion-test.cjs"
+    const report = await require(COMMAND_TEST ? "./command-window-test.cjs" : COMPANION_TEST ? "./companion-test.cjs"
       : EXPRESSION_TEST ? "./expression-integration-test.cjs"
       : DAILY_TEST ? "./daily-actions-test.cjs" : "./self-test.cjs")({
       win, action, state, settings, applyPose, dragEvent, resetAnchor, save, setSize,
       stateFile: STATE_FILE, root: QA_ROOT, menuTemplate, updateMouse, app, testRun,
       companion, companionCommand, pumpCompanion, sendCompanion,
       requestExit,
+      setCursorForTest: point => { clearInterval(cursorTimer); win.webContents.send("pet:cursor",point); },
+      openCommandWindow, getCommandWindow: () => commandWindow, commandRulesFile: COMMAND_RULES_FILE,
     });
     process.exitCode = report.passed ? 0 : 1;
     if (report.passed && !(COMPANION_TEST && report.exitHandled)) app.quit();
   } catch (error) {
     errorLog(error);
-    const errorFile = COMPANION_TEST
+    const errorFile = COMMAND_TEST
+      ? path.join(QA_ROOT, "qa/commands-20261024", testRun, "error.txt")
+      : COMPANION_TEST
       ? path.join(QA_ROOT, "qa/companion-20261021", testRun, "error.txt")
       : EXPRESSION_TEST
       ? path.join(QA_ROOT, "qa/expressions-20261021", testRun, "error.txt")

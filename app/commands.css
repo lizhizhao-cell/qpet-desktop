@@ -1,0 +1,12 @@
+:root{font:14px/1.5 "Microsoft YaHei",system-ui,sans-serif;color:#342b44;background:transparent;color-scheme:light;--tail-x:50%}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;overflow:hidden;background:transparent;padding:6px 6px 16px}
+.bubble-shell{position:relative;height:100%;border:1px solid #c7b3dc;border-radius:16px;background:linear-gradient(145deg,#fff 5%,#faf7ff 100%);box-shadow:0 3px 9px #44235e20;overflow:hidden}
+.bubble-shell::before{content:"";position:absolute;left:11px;top:calc(50% - 3px);width:5px;height:5px;border-radius:1px;background:#b49aca;transform:rotate(45deg);opacity:.75;pointer-events:none}
+.bubble-shell:focus-within{border-color:#a58abb;box-shadow:0 3px 10px #6845862a}
+form{height:100%;margin:0}
+input{display:block;width:100%;height:100%;padding:6px 15px 6px 23px;border:0;outline:0;background:transparent;font:inherit;color:inherit}
+input::placeholder{color:#9986a8;opacity:1}
+.bubble-tail{position:absolute;left:calc(var(--tail-x) - 6px);bottom:10px;width:12px;height:12px;background:#fdfbff;border-right:1px solid #c9badb;border-bottom:1px solid #c9badb;transform:rotate(45deg);pointer-events:none}
+body.tail-up{padding-top:16px;padding-bottom:6px}
+body.tail-up .bubble-tail{top:10px;bottom:auto;transform:rotate(225deg)}

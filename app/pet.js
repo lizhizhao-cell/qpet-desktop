@@ -6,7 +6,8 @@
   let hostState = null, dragging = false, lastInteractive = null;
   let lastPoseAt = -Infinity, lastSent = {x: NaN, y: NaN};
   let lastAction = performance.now(), lastIdleFrame = 0, blinkAt = 0, nextBlink = 0;
-  let nextAuto = performance.now() + 18000, pointer = null;
+  let pointer = null, autonomousAction = false;
+  const autonomy = new window.PetAutonomy.Scheduler({now:performance.now()});
   let actionSerial = 0, pendingAction = null, heldFace = null, performanceSampling = false;
   let companionAction = false, touchTimer = null;
   const pixel = new Uint8Array(4);
@@ -48,7 +49,7 @@
       return Math.max(0, Math.floor(distance / (spec.stride * cssPixelsPerModel)));
     },
     info: () => ({hostState, cssPixelsPerModel, dragging, transparent: true,
-      pendingAction, heldFace}),
+      pendingAction, heldFace, autonomousAction, autonomy:autonomy.info()}),
     sampleIdle: value => { performanceSampling = !!value; },
     hitTest(x, y) {
       if (window.companionUI?.hitTest(x, y)) return true;
@@ -66,7 +67,7 @@
     }
   }
   function resetAtCurrent(cancelPending = true) {
-    companionAction = false;
+    companionAction = false; autonomousAction = false;
     if (cancelPending) { actionSerial++; pendingAction = null; }
     heldFace = null;
     stop();
@@ -81,6 +82,7 @@
   window.qa.resetStep = () => { resetAtCurrent(); return window.qa.info(); };
   async function runAction(name, options = {}) {
     if (!options.companion) {
+      autonomy.defer(performance.now(),hostState?.settings.activityMode);
       window.companionUI?.onManualAction();
       if (companionAction) resetAtCurrent(false);
     }
@@ -95,6 +97,7 @@
     }
     if (dragging) return;
     companionAction = !!options.companion;
+    autonomousAction = !!options.autonomous;
     const s = window.qa.info();
     if (s.walking || s.pendingStepDirection || s.jumpPending || s.pendingEmotion)
       document.querySelector("#step_stop").click();
@@ -135,9 +138,19 @@
   };
   window.petHost.onAction(name => Promise.resolve(runAction(name)).catch(fail));
   window.petHost.onState(value => {
+    const previous=hostState;
     hostState = value;
+    if(previous?.visible!==value.visible||previous?.commandOpen!==value.commandOpen
+      ||previous?.settings.activityMode!==value.settings.activityMode
+      ||previous?.companion?.doNotDisturb!==value.companion?.doNotDisturb
+      ||previous?.companion?.focus?.status!==value.companion?.focus?.status)
+      autonomy.defer(performance.now(),value.settings.activityMode);
     window.desktopFrameClock?.setVisible(value.visible !== false);
     if (value.settings.clickThrough) setInteractive(false);
+    if(autonomousAction&&(!value.visible||!value.settings.autonomous
+      ||value.settings.activityMode==="quiet"||value.commandOpen||value.menuOpen
+      ||value.companion?.doNotDisturb||value.companion?.focus?.status==="running"))
+      resetAtCurrent();
   });
   window.petHost.onCursor(point => {
     if (!dragging) setInteractive(window.desktopPet.hitTest(point.x, point.y));
@@ -156,6 +169,7 @@
   canvas.addEventListener("pointerdown", event => {
     if (event.button !== 0 || !window.desktopPet.hitTest(event.clientX, event.clientY)) return;
     pointer = {x: event.clientX, y: event.clientY};
+    autonomy.defer(performance.now(),hostState?.settings.activityMode);
     canvas.setPointerCapture(event.pointerId);
     lastAction = performance.now();
   });
@@ -167,7 +181,10 @@
     if (tapped) {
       clearTimeout(touchTimer);
       const area = event.clientY < innerHeight * .55 ? "head" : "body";
-      touchTimer = setTimeout(() => window.companionUI?.touch(area).catch(fail), 500);
+      touchTimer = setTimeout(() => {
+        window.companionUI?.touch(area).catch(fail);
+        window.petHost.openCommands();
+      }, 500);
     }
   });
   canvas.addEventListener("pointercancel", () => {
@@ -188,6 +205,23 @@
     clearTimeout(touchTimer); runAction("happy").catch(fail);
   });
 
+  function autonomousStep(now) {
+    const state=hostState,care=state?.companion;
+    const busy=window.desktopPet.isBusy();
+    if(!busy)autonomousAction=false;
+    const selected=autonomy.step(now,{
+      enabled:!!state?.settings.autonomous,mode:state?.settings.activityMode,
+      visible:!!state?.visible,busy,focus:care?.focus?.status==="running",
+      doNotDisturb:!!care?.doNotDisturb,typing:!!state?.commandOpen,
+      hovered:lastInteractive===true,dragging:dragging||!!pointer,
+      heldFace:!!heldFace,menuOpen:!!state?.menuOpen,
+      canStroll:!care?.reminderPending&&Math.max(window.qa.stepCapacity("left"),window.qa.stepCapacity("right"))>0,
+      hour:new Date().getHours(),
+    });
+    if(selected)runAction(selected,{companion:true,autonomous:true}).catch(fail);
+    return selected;
+  }
+  window.desktopPet.sampleAutonomy = now => hostState?.selfTest ? autonomousStep(now) : null;
   function idle(now) {
     if (window.qa.ready && now - lastIdleFrame >= 33) {
       lastIdleFrame = now;
@@ -206,11 +240,7 @@
         if (!heldFace) Object.assign(values, {ParamEyeLOpen: eyes, ParamEyeROpen: eyes});
         writeValues(values, false);
         draw();
-        if (!heldFace && !window.companionUI?.isQuiet() && hostState?.settings.autonomous
-            && now > nextAuto && now - lastAction > 12000) {
-          nextAuto = now + 18000 + Math.random() * 14000;
-          runAction(Math.random() < .5 ? "blink" : "nod").catch(fail);
-        }
+        autonomousStep(now);
       }
     }
     requestAnimationFrame(idle);

@@ -11,7 +11,9 @@ for(const[relative,expected]of Object.entries(lock.runtime)){
 if(!fs.existsSync("app/vendor/live2dcubismcore.min.js")||sha("app/vendor/live2dcubismcore.min.js")!==lock.coreSha256)
   throw Error("The matching licensed Core is required");
 if(!fs.existsSync("assets/icon.ico"))throw Error("assets/icon.ico is required");
-if(fs.existsSync("release"))throw Error("Existing release output is protected; move it aside or build from a fresh checkout");
+const output=path.resolve(root,config.directories.output);
+if(!output.startsWith(root+path.sep))throw Error("Build output must stay within this checkout");
+if(fs.existsSync(output))throw Error("Existing build output is protected; choose a new output directory");
 if(process.env.QPET_ELECTRON_DIST){
   const directory=path.resolve(process.env.QPET_ELECTRON_DIST);
   if(!fs.existsSync(path.join(directory,"electron.exe")))throw Error("Invalid fixed local Electron directory");
@@ -24,10 +26,10 @@ const {build}=require("electron-builder");
 build({config,publish:"never"}).then(files=>{
   const artifacts=files.filter(file=>fs.existsSync(file)&&/\.(exe|zip)$/.test(file));
   const checksums=artifacts.map(file=>({name:path.basename(file),bytes:fs.statSync(file).size,sha256:sha(file)}));
-  fs.writeFileSync(path.join(root,"release/SHA256SUMS.txt"),
+  fs.writeFileSync(path.join(output,"SHA256SUMS.txt"),
     checksums.map(file=>file.sha256+"  "+file.name).join("\n")+"\n");
-  fs.writeFileSync(path.join(root,"release/build-receipt.json"),JSON.stringify({
-    version:"0.1.0-beta.1",platform:"windows-x64",electronVersion:config.electronVersion,artifacts:checksums,
+  fs.writeFileSync(path.join(output,"build-receipt.json"),JSON.stringify({
+    version:require("../app/package.json").version,platform:"windows-x64",electronVersion:config.electronVersion,artifacts:checksums,
     publicUploadPerformed:false,codeSigned:false,crossMachineValidated:false,
     assetDistributionPermissionConfirmed:false,coreDistributionTermsConfirmed:false
   },null,2));

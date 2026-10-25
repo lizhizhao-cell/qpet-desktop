@@ -18,8 +18,14 @@ try {
     }
     $taskAssets=@()
     if($UploadRelease){
-        $taskReceipt=Get-Content -LiteralPath (Join-Path $taskRepo 'release/build-receipt.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-        $taskReleaseRoot=[IO.Path]::GetFullPath((Join-Path $taskRepo 'release'))
+        $taskVersion=(Get-Content -LiteralPath (Join-Path $taskRepo 'app/package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+        if($taskVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$'){throw 'Invalid application version'}
+        $taskOutput=& node -p "require('./electron-builder.cjs').directories.output"
+        if($LASTEXITCODE -ne 0 -or -not $taskOutput){throw 'Cannot read the configured build output'}
+        $taskReleaseRoot=[IO.Path]::GetFullPath((Join-Path $taskRepo $taskOutput))
+        if(-not $taskReleaseRoot.StartsWith($taskRepo+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Build output escaped repository'}
+        $taskReceipt=Get-Content -LiteralPath (Join-Path $taskReleaseRoot 'build-receipt.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if($taskReceipt.version -ne $taskVersion){throw 'Build receipt version differs from application version'}
         if(@($taskReceipt.artifacts).Count -ne 2){throw 'Expected one tested installer and one ZIP'}
         foreach($taskArtifact in $taskReceipt.artifacts){
             if([IO.Path]::GetFileName($taskArtifact.name) -ne $taskArtifact.name){throw 'Artifact must be a filename'}
@@ -46,7 +52,8 @@ try {
     }
     if($UploadRelease){
         $taskNotes=Join-Path $taskRepo 'RELEASE_NOTES.md'
-        & gh release create v0.1.0-beta.1 @taskAssets --repo $Repository --draft --prerelease --title 'QPet v0.1.0-beta.1' --notes-file $taskNotes
+        $taskTag='v'+$taskVersion
+        & gh release create $taskTag @taskAssets --repo $Repository --draft --prerelease --title ('QPet '+$taskTag) --notes-file $taskNotes
         if($LASTEXITCODE -ne 0){throw 'Draft release upload failed'}
     }
 }finally{Pop-Location}

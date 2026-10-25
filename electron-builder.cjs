@@ -3,7 +3,7 @@ module.exports = {
   appId: "local.qpet.desktop",
   productName: "QPet",
   electronVersion: "43.8.3",
-  directories: {app: "app", output: "release", buildResources: "assets"},
+  directories: {app: "app", output: "release-v0.2.0-beta.5-autonomy-final", buildResources: "assets"},
   asar: true,
   npmRebuild: false,
   files: ["**/*", "!vendor/README.md", "!**/*.test.cjs"],

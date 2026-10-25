@@ -10,6 +10,13 @@ const INTERACTIONS = Object.freeze({
     lines: ["好呀。松松肩，慢慢呼一口气，我在这里陪着。", "这一小会儿先不用赶进度。看远一点，歇一歇。", "休息也是正事。等你准备好了，我们再继续。"]},
 });
 const number = value => Number.isFinite(value) && value >= 0 ? value : 0;
+const RESPONSES=Object.freeze({
+  call:{action:"greeting",lines:["在呢，叫我有什么事？","收到召唤。陪你待一会儿。","我在这里，随时点点我。"]},
+  pet:{action:"crescent",lines:["摸头奖励收到啦。","好啦，给你一个笑。","这一下很受用，心情加一。"]},
+  comfort:{action:"approve",lines:["先歇一小会儿吧。我陪着你，不用急。","今天辛苦了，先做眼前能做的一点就好。","累的时候可以慢一点。需要时再叫我。"]},
+  bored:{action:"happy",lines:["那我表演一个，给你解解闷。","收到，一起开心一下！","看这里，给你一点小小的热闹。"]},
+  thanks:{action:"proud",lines:["不客气，陪着你是我的拿手项目。","收到夸奖啦。我们继续慢慢来。","嘿嘿，这句谢谢我收下了。"]},
+});
 const dateKey = now => {
   const date = new Date(now);
   return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"),
@@ -21,7 +28,8 @@ function initial() {
     lastGreetingAt: 0, lastTouchAt: 0, lastClosedAt: 0, sessions: 0,
     totalDays: 0, headTouches: 0, bodyTouches: 0, completedFocus: 0,
     focusMinutes: 0, days: [], focus: null, reminder: null, lastReminderId: null,
-    lastInteractionAt: 0, interactions: {encourage: 0, praise: 0, relax: 0}};
+    lastInteractionAt: 0, interactions: {encourage: 0, praise: 0, relax: 0},
+    responses:{call:0,pet:0,comfort:0,bored:0,thanks:0}};
 }
 
 class Companion {
@@ -40,6 +48,8 @@ class Companion {
         this.data[name] = number(saved[name]);
       for (const topic of Object.keys(INTERACTIONS))
         this.data.interactions[topic] = number(saved.interactions?.[topic]);
+      for (const topic of Object.keys(RESPONSES))
+        this.data.responses[topic] = number(saved.responses?.[topic]);
       this.data.days = Array.isArray(saved.days) ? saved.days.filter(day =>
         day && /^\d{4}-\d{2}-\d{2}$/.test(day.date)).slice(-62).map(day => ({
         date: day.date, opens: number(day.opens), touches: number(day.touches),
@@ -103,6 +113,7 @@ class Companion {
       headTouches: this.data.headTouches, bodyTouches: this.data.bodyTouches,
       completedFocus: this.data.completedFocus, focusMinutes: this.data.focusMinutes,
       interactions: {...this.data.interactions},
+      responses:{...this.data.responses},
       focus: focus ? {status: focus.status, minutes: focus.minutes, remainingMs} : null,
       reminderPending: !!this.data.reminder,
     };
@@ -160,6 +171,16 @@ class Companion {
     const choice = INTERACTIONS[topic];
     return {kind: "interaction", topic, line: choice.lines[(count - 1) % choice.lines.length],
       action: choice.action, automatic: false};
+  }
+  respond(topic) {
+    if(!this.data.enabled||!Object.hasOwn(RESPONSES,topic))return null;
+    if(this.data.lastInteractionAt&&this.now()-this.data.lastInteractionAt<4000)return null;
+    this.data.lastInteractionAt=this.now();
+    const count=++this.data.responses[topic],choice=RESPONSES[topic];
+    this.save();
+    const quiet=this.data.focus?.status==="running";
+    return {kind:"interaction",topic,line:quiet?"我在，先安静陪你完成这轮专注。":choice.lines[(count-1)%choice.lines.length],
+      action:quiet?null:choice.action,automatic:false};
   }
   startFocus(minutes) {
     if (!this.data.enabled || this.data.focus) return null;

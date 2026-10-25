@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'">
+  <title>和 QPet 互动</title>
+  <link rel="stylesheet" href="/desktop/commands.css">
+</head>
+<body>
+ <main class="bubble-shell">
+  <form id="command-form">
+    <input id="command-input" name="command" type="text" maxlength="200" placeholder="说点什么…" aria-label="输入指令，回车发送，Esc收起" autocomplete="off">
+  </form>
+ </main>
+ <div class="bubble-tail" aria-hidden="true"></div>
+  <script src="/desktop/commands.js"></script>
+</body>
+</html>

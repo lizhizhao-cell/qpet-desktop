@@ -18,6 +18,8 @@ function paths({packaged,args=[]}){
       if(name==="electron")return {app};
       if(name==="node:fs")return fakeFs;
       if(name==="./companion-core.cjs")return require("../app/companion-core.cjs");
+      if(name==="./command-parser.cjs")return require("../app/command-parser.cjs");
+      if(name==="./command-placement.cjs")return require("../app/command-placement.cjs");
       return require(name);
     },console,setTimeout,clearTimeout,setInterval,clearInterval,Buffer};
   vm.runInNewContext(source+"\nmodule.exports={STATE_FILE,INSTANCE_FILE,QA_ROOT,RUNTIME};",context);
