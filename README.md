@@ -6,19 +6,21 @@ Windows x64 Live2D桌面宠物，基于Electron与本地Cubism Core运行。角�
 
 ## 下载与使用
 
-普通用户请到 [v0.1.0-beta.1 下载页](https://github.com/lizhizhao-cell/qpet-desktop/releases/tag/v0.1.0-beta.1) 选择下面的文件，**无需下载源码或安装开发工具**：
+普通用户请到 [v0.2.0-beta.5 下载页](https://github.com/lizhizhao-cell/qpet-desktop/releases/tag/v0.2.0-beta.5) 选择下面的文件，**无需下载源码或安装开发工具**：
 
-- [Windows x64 安装版](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/QPet-Setup-0.1.0-beta.1-win-x64.exe)：下载后双击安装。
-- [Windows x64 免安装 ZIP](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/QPet-0.1.0-beta.1-win-x64.zip)：完整解压到可写目录，再双击其中的`QPet.exe`，保留其他文件。
-- [SHA256SUMS.txt](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.1.0-beta.1/SHA256SUMS.txt)：下载文件的SHA256。
+- [Windows x64 安装版](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.2.0-beta.5/QPet-Setup-0.2.0-beta.5-win-x64.exe)：下载后双击安装。
+- [Windows x64 免安装 ZIP](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.2.0-beta.5/QPet-0.2.0-beta.5-win-x64.zip)：完整解压到可写目录，再双击其中的`QPet.exe`，保留其他文件。
+- [SHA256SUMS.txt](https://github.com/lizhizhao-cell/qpet-desktop/releases/download/v0.2.0-beta.5/SHA256SUMS.txt)：下载文件的SHA256。
 
-这是测试预发布版，包含运行需要的原模型与运行时，已完成本机安装、运行、互动、动作和卸载检查。应用未签名，其他电脑兼容性仍待验证；官方模型工程核验尚未完成，使用现有正常运行模型。源码许可和第三方/素材说明见文末及`THIRD_PARTY_NOTICES.md`，不宣称获得额外素材授权。
+这是测试预发布版，包含运行需要的原模型与运行时，已完成本机运行、互动、动作与原用户数据保持检查。安装器机制沿用旧版，本轮未重复安装/卸载。应用未签名，其他电脑兼容性仍待验证；官方模型工程核验尚未完成，使用现有正常运行模型。源码许可和第三方/素材说明见文末及`THIRD_PARTY_NOTICES.md`，不宣称获得额外素材授权。
+
+升级前先退出旧桌宠，再运行新版安装程序；ZIP用户请完整解压到新目录运行。原位置设置与陪伴记忆继续沿用，旧版安装包仍可在历史Release中下载。
 
 Windows可能因应用未签名显示提示，请先核对来源和SHA256，自行决定是否运行。退出请使用角色右键或托盘菜单。
 
 ## 功能
 
-当前源码版本为 **0.2.0-beta.5**，新增功能与验证见[更新说明](RELEASE_NOTES.md)。上方公开下载仍为0.1.0-beta.1，不包含下列气泡和自主增强功能。
+当前源码与公开下载版本为 **0.2.0-beta.5**，新增功能与验证见[更新说明](RELEASE_NOTES.md)。
 
 - 头顶窄输入气泡，带少量装饰、随文字长度伸缩；单击宠物打开、回车发送、Esc收起。支持动作口令和JSON扩展，见[互动指令说明](INTERACTION_COMMANDS.md)。
 - 自然/活泼/安静三档自主活动、短散步和更多本地互动；输入、专注、免打扰和手动操作优先。
